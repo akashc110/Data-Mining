@@ -1,0 +1,7 @@
+We chose sp500 as our index and selected the top six stocks from it weighted by market capitalization.
+Our goal is to replicate the index by selecting a few stocks and calculating the log returns.
+
+So we used the hist.get.quote() function from the tseries R package.
+We chose the period from 1st Jan 2009 to 31st Dec 2015.
+Since we downloaded monthly data, we got 84 observations in all.
+From those 84 observations we calculated the monthly returns and we got 83 monthly returns.
