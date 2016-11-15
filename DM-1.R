@@ -30,7 +30,7 @@ Performance = NULL
 for (i in 1:5) {
 
 assets = 12*i
-#cap <- smallcap
+
 if(i==1){cap <- Portfolio12}
 if(i==2){cap <- Portfolio24}
 if(i==3){cap <- Portfolio36}
