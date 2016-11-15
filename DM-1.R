@@ -20,10 +20,8 @@ midcap <- read.csv("MidCap.csv")[,-1]
 largecap <- read.csv("LargeCap.csv")[,-1]
 mixcap <- cbind(smallcap[,1:5],midcap[,2:5],largecap[,2:5])
 
-#Caps <- c(smallcap,midcap,largecap)
 Track = NULL
 
-#Small cap portfolio calculations
 for (i in 1:4) {
 
 assets = 12
@@ -76,6 +74,7 @@ beta1 = ifelse(abs(betas)<10^(-3),0,betas)
 table(beta1) 
 length(beta1[beta1!=0])
 
+#Code to calculate portfolio returns for 12 months of year 2015
 d = matrix(0,12,3)
 for (i in 1:12) {
   returns.T <- returns.test[i,1]
@@ -84,12 +83,13 @@ for (i in 1:12) {
   d[i,] <- t(c(returns.T,portfolio.returns, result))
   
 }
-d <- as.data.frame(d)
-table(d$V3)
+d <- as.data.frame(d)     #Test year (2015) returns
+names(d) <- c("Benchmark_Returns", "Portfolio_Returns","Performance")
+table(d$Performance)
 
-Tracking.Error = mean((as.numeric(as.character(d$V2) )  -  as.numeric(as.character(d$V1)))^2 )*100
+Tracking.Error = mean((as.numeric(as.character(d$Portfolio_Returns) )  -  as.numeric(as.character(d$Benchmark_Returns)))^2 )*100
 Tracking.Error <- paste(as.character(round(Tracking.Error,3) ),"%")
-#sd(as.numeric(as.character(d$V2) )  -  as.numeric(as.character(d$V1)))
+#sd(as.numeric(as.character(d$Portfolio_Returns) )  -  as.numeric(as.character(d$Benchmark_Returns)))
 Track = rbind(Track,Tracking.Error)
 
 table(beta1) 
