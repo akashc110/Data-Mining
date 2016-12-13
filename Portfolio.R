@@ -4,6 +4,7 @@ library(glmnet)
 library(quadprog)
 library(tseries)
 library(RCurl)
+library(calibrate)
 
 smallcap <- read.csv("Small50.csv")[,-1]
 midcap <- read.csv("Mid50.csv")[,-1]
@@ -17,11 +18,6 @@ benchmark <- read.csv("Benchmark.csv")[,-1]
 size =  function(x) {sample(2:51,x)}
 
 portfolio = function(x)  {
-  #data1 = cbind(smallcap[,size(x)],midcap[,size(x)],largecap[,size(x)])
-  #Lasso.model  <- model.matrix(Benchmark~.-1, data = data1[,-1])
-  #fit.lasso <- cv.glmnet(Lasso.model,Benchmark)
-  #values <- ifelse(coef(fit.lasso)[-1] !=0, 1, 0)
-  
   return(cbind(smallcap[,size(x)],midcap[,size(x)],largecap[,size(x)]))
   }
 
@@ -87,6 +83,7 @@ for (i in ptf) {
   Dmat1 = cov(asset.returns)                        #Compute covariance matrix of assets
   
   #Tuning parameter lambda. Smaller the value more the zeros
+  #lambda = 0.01
   lambda = 0.01
   Dmat = matrix(Dmat1[1:assets, 1:assets], nrow = assets, ncol = assets)  + lambda*(diag(assets))  
   
@@ -98,7 +95,6 @@ for (i in ptf) {
   Amat <- cbind(A.Equality, dvec, diag(assets), -diag(assets))
   bvec <- c(1, exp.benchmark, rep(0, assets),rep(-2/assets, assets))
   
-  #Comment this when running equal weight above snippet
   qp <- solve.QP(Dmat, dvec, Amat, bvec, meq=1) 
   qp$solution
   
@@ -135,7 +131,6 @@ count = c(rep(30,Optimized[1]),rep(60,Optimized[2]),rep(90,Optimized[3]),
 tab = c(rep(Optimized[1],Optimized[1]) ,rep(Optimized[2],Optimized[2]),
         rep(Optimized[3],Optimized[3]),rep(Optimized[4],Optimized[4]),
         rep(Optimized[5],Optimized[5]))
-#count <- data.frame(Original = c(rep(30,Optimized[1]),60,90,120,135),Optimized)
 
 t1 = (Optimized[1]/30)*100
 t2 = (Optimized[2]/60)*100
@@ -156,20 +151,9 @@ text(x = j, y = count, label =lab,
 
 names(Track)<- c('Tracking.Error', 'Transaction.Cost')
 Portfolio.Size =as.factor(Track$Transaction.Cost)
-ggplot(Track, aes(x = Tracking.Error,y=Transaction.Cost/100,col=Portfolio.Size)) +
-  geom_point(size = 2) + ggtitle("Transaction Cost vs Tracking Error for 500 Portfolios") + 
-  geom_text(aes(label=Track$Transaction.Cost),hjust=0, vjust=0)
-
-
-# chunk <- function(x,n) split(x, factor(sort(rank(x)%%n)))
-# index =  chunk(x,n)  
-# 
-# par(mfrow=c(1,5))
-# boxplot(Track$Tracking.Error[index$`0`])
-# boxplot(Track$Tracking.Error[index$`1`])
-# boxplot(Track$Tracking.Error[index$`2`])
-# boxplot(Track$Tracking.Error[index$`3`])
-# boxplot(Track$Tracking.Error[index$`4`])
+# ggplot(Track, aes(x = Tracking.Error,y=Transaction.Cost/100,col=Portfolio.Size)) +
+#   geom_point(size = 2) + ggtitle("Transaction Cost vs Tracking Error for 500 Portfolios") + 
+#   geom_text(aes(label=Track$Transaction.Cost),hjust=0, vjust=0)
 
 df <- data.frame(
   value1 = Track$Tracking.Error,
@@ -177,25 +161,71 @@ df <- data.frame(
   group = c(rep('Set1_30',length(bin)),rep('Set2_60',length(bin)),rep('Set3_90',length(bin)),
             rep('Set4_120',length(bin)),rep('Set5_135',length(bin)))
 )
-
+ 
 ggplot(df, aes(factor(group),value1)) + geom_boxplot() + xlab('portfolio sizes') +
-  ylab('Tracking Error') +  ggtitle("Variation of Tracking Error for 100 portfolio samples")
-  
+ylab('Tracking Error') +  ggtitle("Variation of Tracking Error for 100 portfolio samples")
+
 ggplot(df, aes(factor(group),value2)) + geom_boxplot() + xlab('portfolio sizes') +
-  ylab('Transaction Cost') +  ggtitle("Variation of Transaction Cost for 100 portfolio samples")
+ylab('Transaction Cost') +  ggtitle("Variation of Transaction Cost for 100 portfolio samples")
 
 
 
+fact.track <- scale(Track$Tracking.Error) 
+fact.tran <- scale(Track$Transaction.Cost)
+plot(fact.track)
+plot(fact.tran)
+points(fact.track, col='red')
+
+lambda1 = 1.6
+#loss_function = (1-lambda1)*fact.track + (lambda1)*fact.tran
+loss_function = fact.track + (lambda1)*fact.tran
+plot(loss_function)
+abline(h=0,  col = 'red', lty=2)
+
+variance_function = c(var(Track$Tracking.Error[1:100]),var(Track$Tracking.Error[101:200]),
+                      var(Track$Tracking.Error[201:300]),var(Track$Tracking.Error[301:400]),
+                      var(Track$Tracking.Error[401:500]))
+
+plot(variance_function,  xaxt = "n", main = 'Variance of Tracking Error', ylab = 'Variance', xlab = 'Portfolio Sizes')
+axis(1, at=1:5, labels=c('Set1_30','Set1_60','Set1_90','Set1_120','Set1_135'))
+lines(variance_function, col='red', lwd=2)
+  
+linMap <- function(x, from, to)
+  (x - min(x)) / max(x - min(x)) * (to - from) + from
+
+trck_function = c(median(Track$Tracking.Error[1:100]),median(Track$Tracking.Error[101:200]),
+                  median(Track$Tracking.Error[201:300]),median(Track$Tracking.Error[301:400]),
+                  median(Track$Tracking.Error[401:500]))
+
+trans_function = linMap(Track$Transaction.Cost, min(Track$Tracking.Error), max(Track$Tracking.Error))
+
+trans_function = c(median(Track$Transaction.Cost[1:100]),median(Track$Transaction.Cost[101:200]),
+                   median(Track$Transaction.Cost[201:300]),median(Track$Transaction.Cost[301:400]),
+                   median(Track$Transaction.Cost[401:500]))
 
 
 
-# y = c(mean(Track$Transaction.Cost[1:5]),mean(Track$Transaction.Cost[6:10]),
-#       mean(Track$Transaction.Cost[11:15]),mean(Track$Transaction.Cost[16:20]),
-#       mean(Track$Transaction.Cost[21:25]))/100
+# trck_function = c(median(fact.track[1:100]),median(fact.track[101:200]),
+#                   median(fact.track[201:300]),median(fact.track[301:400]),
+#                   median(fact.track[401:500]))
 # 
-# x = c(mean(Track$Tracking.Error[1:5]),mean(Track$Tracking.Error[6:10]),
-#       mean(Track$Tracking.Error[11:15]),mean(Track$Tracking.Error[16:20]),
-#       mean(Track$Tracking.Error[21:25]))
-# 
-# plot(x,y)
-# lines(x,y)
+# trans_function = c(median(fact.tran[1:100]),median(fact.tran[101:200]),
+#                    median(fact.tran[201:300]),median(fact.tran[301:400]),
+#                    median(fact.tran[401:500]))
+
+
+plot(trck_function, col = 'red',pch =19,xaxt = "n", main = 'Error-Cost Trade-off for Portfolio Selection', xlab = 'Portfolio Sizes',
+     ylab = 'Standard error/cost values')
+axis(1, at=1:5, labels=c('Set1_30','Set1_60','Set1_90','Set1_120','Set1_135'))
+legend("topright", c("Tracking Error","Transaction Cost"),
+       lty=c(1,1),lwd=c(2,2),col=c("blue","orange"),cex=0.8) 
+#par(new = TRUE)
+lines(trck_function, col='darkblue', lwd=2)
+# second plot
+par(new = TRUE)
+plot(trans_function,col = 'green',pch =19,xaxt = "n", yaxt = "n",xlab = NA, ylab = NA)
+lines(trans_function, col='orange', lwd=2)
+#locator()
+#textxy(locator()$x,locator()$y,'~67Assets',cex = 1.1)
+#dev.off()
+

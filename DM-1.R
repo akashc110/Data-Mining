@@ -15,9 +15,10 @@
 
 rm(list  = ls())
 library(quadprog)
-smallcap <- read.csv("SmallCap.csv")[,-1]
-midcap <- read.csv("MidCap.csv")[,-1]
-largecap <- read.csv("LargeCap.csv")[,-1]
+smallcap <- read.csv("Small50.csv")[,-1]
+midcap <- read.csv("Mid50.csv")[,-1]
+largecap <- read.csv("Large50.csv")[,-1]
+
 
 Portfolio12 <- cbind(smallcap[,1:5],midcap[,2:5],largecap[,2:5])
 Portfolio24 <- cbind(smallcap[,1:9],midcap[,2:9],largecap[,2:9])
@@ -102,7 +103,7 @@ Track = rbind(Track,Tracking.Error)
 
 table(beta1) 
  length(beta1[beta1!=0])
- rm(returns.test, beta1 )
+ #rm(returns.test, beta1 )
 }
 
 portfolio.name <- c("12 Assets", "24 Assets", "36 Assets","48 Assets","60 Assets")
